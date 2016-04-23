@@ -7,6 +7,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 import org.omg.CORBA.MARSHAL;
@@ -20,14 +21,19 @@ public class GameOverScreen implements Screen {
     OrthographicCamera cam;
     SpriteBatch sb;
     Texture replay;
+    String score;
+    BitmapFont bmf;
 
-    public GameOverScreen(Main game) {
+    public GameOverScreen(Main game, int score) {
         this.game = game;
         cam = new OrthographicCamera();
         cam.setToOrtho(false, Main.WIDTH, Main.HEIGHT);
         cam.position.set(0, 0, 0);
         cam.update();
         sb = new SpriteBatch();
+
+        this.score = "Score: "+score;
+        bmf = new BitmapFont();
 
         replay = new Texture("android-replay.png");
     }
@@ -46,6 +52,8 @@ public class GameOverScreen implements Screen {
         sb.setProjectionMatrix(cam.combined);
         sb.begin();
         sb.draw(replay, cam.position.x - replay.getWidth() / 2, cam.position.y - replay.getHeight() / 2);
+        bmf.setColor(0f, 0, 0, 1.0f);
+        bmf.draw(sb, score, cam.position.x-25, cam.position.y+100);
         sb.end();
 
         //Do some updating right now....

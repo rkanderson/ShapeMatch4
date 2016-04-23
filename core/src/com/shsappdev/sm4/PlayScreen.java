@@ -7,6 +7,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
@@ -30,6 +31,9 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
     OrthographicCamera gameCamera;
     OrthographicCamera b2drCamera;
 
+    float timeNeededToCreateAnotherBall = 2;
+    float ballCreationTimeCounter = 0;
+
     World world;
     Box2DDebugRenderer b2dr;
     ShapeRenderer sr;
@@ -37,6 +41,11 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
     Array<Ball> balls1, balls2; //different arrays for balls of type 1 and 2
     Sorter sorter;
     BallSensor bs0west, bs0southwest, bs1east, bs1southeast; //The ball sensors to the left, right, and left/right halves of bottom
+
+    int points = 0;
+    public static final int pointsPerBall = 1;
+    private String scoreStr ="Score: 0";
+    private BitmapFont bmf;
 
     //input booleans
     boolean reset = false;
@@ -79,6 +88,9 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
         bs1southeast = new BallSensor(world, b2drCamera.position.x+b2drCamera.viewportWidth/4,
                 b2drCamera.position.y - b2drCamera.viewportHeight/2, b2drCamera.viewportWidth/2, 1, 1);
 
+        //define font
+        bmf = new BitmapFont();
+
     }
 
     @Override
@@ -89,10 +101,13 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
     @Override
     public void render(float delta) {
         //There will be 2 parts to this method
-        //  1) The Rendering (drawing to screen)
-        //  2) The updating (this method calls update method calls handleInput method)
+        //  1) The updating (this method calls update method calls handleInput method)
+        //  2) The Rendering (drawing to screen)
 
-        //---PART I--- The Rendering
+        //---PART I--- The Updating
+        update(delta);
+
+        //---PART II--- The Rendering
         Gdx.gl.glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // These 2 lines
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);    // clear the screen
         // so we can draw new things
@@ -142,18 +157,15 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
                 (sorter.body.getPosition().y + sorter.yDisplacement)*PPM,
                 (sorter.body.getPosition().x + sorter.xDisplacement)*PPM,
                 (sorter.body.getPosition().y - sorter.yDisplacement)*PPM,
-                sorter.height*PPM);
+                    sorter.height*PPM);
 
         sr.end();
 
-        sb.setProjectionMatrix(gameCamera.combined);
+        //sb.setProjectionMatrix(gameCamera.combined);
         sb.begin();
-
-        // Draw the player "Sorter" image
-
+        bmf.setColor(0f, 0, 0, 1.0f);
+        bmf.draw(sb, scoreStr, 50, Main.HEIGHT-50);
         sb.end();
-
-
 
 
 
@@ -161,9 +173,6 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
 
         if(showB2DRLines)b2dr.render(world, b2drCamera.combined); //Shows the outlines of box2D shapes
 
-
-        //---PART II--- The Updating
-        update(delta);
 
     }
 
@@ -175,7 +184,12 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
         world.step(1 / 60f, 8, 3); //6 2   // 60 FPS
 
         //Make a new ball?
-        if(Math.random()>.99) createBall(0, b2drCamera.position.y+20, 1);
+        ballCreationTimeCounter+=delta;
+        if(ballCreationTimeCounter >= timeNeededToCreateAnotherBall) {
+            createBall(0, b2drCamera.position.y + 20, 1);
+            ballCreationTimeCounter=0;
+            timeNeededToCreateAnotherBall = 0.35f + 2*(float)Math.pow(0.5, points);
+        }
 
         //Destroy any balls that need to be destroyed
         for(Ball b: balls1) if(b.isDestroyed) {
@@ -208,7 +222,7 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
     }
 
     public void gameOver(){
-        game.setScreen(new GameOverScreen(game));
+        game.setScreen(new GameOverScreen(game, points));
     }
 
     public void createBall(float x, float y, float radius){
@@ -324,6 +338,9 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
                 //A match with ball and ball Sensor
                 //Make the ball explode ; all is happy and keep on playing!
                 ball.parent.isDestroyed=true;
+                points+=pointsPerBall;
+                scoreStr = "Score: "+points;
+                //System.out.println(points);
             } else if(ball.parent.type==1 && ballSensor.type==0){
                 //OOOOOHHHHH GAME OVER
                 gameOver();
@@ -332,6 +349,9 @@ public class PlayScreen implements Screen, InputProcessor, ContactListener {
                 //HELL YAH MATCH!!!! :DDDD
                 //System.out.println("1 matched with 1");
                 ball.parent.isDestroyed=true;
+                points+=pointsPerBall;
+                scoreStr = "Score: "+points;
+                //System.out.println(points);
             } else if(ball.parent.type==0 && ballSensor.type== 1){
                 //U LOSE :(
                 //System.out.println("0 mismatched with 1");
